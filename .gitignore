@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# binaries
+server
+*.out
+
+# build files
+*.o
+
+# zip files
+*.zip
+
+# unnecessary folders
+Crow-master/

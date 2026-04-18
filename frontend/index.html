@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>C++ Code Visualizer</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #f7f5f0;
+      --bg-card:     #ffffff;
+      --bg-editor:   #fdfcf9;
+      --bg-sidebar:  #f0ede6;
+      --ink:         #1a1714;
+      --ink-2:       #4a4540;
+      --ink-3:       #8a837a;
+      --rule:        #e2ddd6;
+      --accent:      #c84b1e;
+      --accent-soft: #fbe9e2;
+      --accent-2:    #2563a8;
+      --accent-2-soft: #e0eaf8;
+      --green:       #16803c;
+      --green-soft:  #dcfce7;
+      --amber:       #b45309;
+      --amber-soft:  #fef3c7;
+      --highlight:   #fffbeb;
+      --highlight-border: #f59e0b;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:   0 4px 16px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.04);
+      --shadow-lg:   0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.05);
+      --radius:      12px;
+      --radius-sm:   8px;
+    }
+
+    html { font-size: 15px; }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* ─── TOPBAR ─── */
+    .topbar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--rule);
+      padding: 0 2rem;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+    .topbar-title {
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      font-size: 1.15rem;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+    }
+    .topbar-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 4px;
+      padding: 1px 6px;
+      letter-spacing: 0.04em;
+    }
+    .topbar-meta {
+      font-size: 0.75rem;
+      color: var(--ink-3);
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ─── LAYOUT ─── */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      grid-template-rows: auto 1fr;
+      gap: 1.25rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 3rem;
+      min-height: calc(100vh - 52px);
+    }
+
+    .editor-pane   { grid-column: 1; grid-row: 1 / 3; display: flex; flex-direction: column; gap: 1rem; }
+    .controls-pane { grid-column: 2; grid-row: 1; }
+    .memory-pane   { grid-column: 2; grid-row: 2; }
+
+    /* ─── PANELS ─── */
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid var(--rule);
+      background: var(--bg-sidebar);
+    }
+    .panel-title {
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .panel-dots {
+      display: flex;
+      gap: 5px;
+    }
+    .panel-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--rule);
+    }
+    .panel-dot:nth-child(1) { background: #ff6057; }
+    .panel-dot:nth-child(2) { background: #ffbd2e; }
+    .panel-dot:nth-child(3) { background: #28ca41; }
+
+    /* ─── CODE TEXTAREA ─── */
+    .editor-body {
+      background: var(--bg-editor);
+      padding: 0;
+      display: flex;
+    }
+    .line-numbers {
+      padding: 1rem 0.75rem 1rem 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      color: var(--ink-3);
+      text-align: right;
+      user-select: none;
+      min-width: 2.5rem;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--rule);
+    }
+    .editor-textarea {
+      flex: 1;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: var(--ink);
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 1rem 1.25rem;
+      min-height: 200px;
+    }
+
+    /* ─── EXECUTION VIEWER ─── */
+    .exec-body {
+      padding: 0.5rem 0;
+      background: var(--bg-editor);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.83rem;
+      line-height: 1.7;
+    }
+    .code-line {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      padding: 0 0;
+      transition: background 0.18s ease;
+    }
+    .code-line-num {
+      min-width: 2.5rem;
+      padding: 0.1rem 0.75rem 0.1rem 1rem;
+      color: var(--ink-3);
+      text-align: right;
+      user-select: none;
+      font-size: 0.75rem;
+      line-height: 1.7;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--rule);
+      flex-shrink: 0;
+      transition: background 0.18s ease, color 0.18s ease;
+    }
+    .code-line-text {
+      padding: 0.1rem 1.25rem;
+      white-space: pre;
+      flex: 1;
+      transition: background 0.18s ease;
+    }
+    .code-line.active .code-line-num {
+      color: var(--accent);
+      background: var(--accent-soft);
+      font-weight: 500;
+    }
+    .code-line.active .code-line-text {
+      background: var(--highlight);
+      box-shadow: inset 3px 0 0 var(--highlight-border);
+    }
+    .code-line.active {
+      animation: lineFlash 0.28s ease;
+    }
+    @keyframes lineFlash {
+      0%   { background: var(--accent-soft); }
+      100% { background: transparent; }
+    }
+
+    /* ─── STEP PROGRESS ─── */
+    .progress-wrap {
+      padding: 0.75rem 1rem 0.6rem;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--rule);
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--ink-3);
+      margin-bottom: 0.4rem;
+      font-family: 'DM Mono', monospace;
+    }
+    .progress-track {
+      height: 3px;
+      background: var(--rule);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      border-radius: 99px;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ─── BUTTONS ─── */
+    .btn-row {
+      padding: 0.9rem 1rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-run {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+      padding: 0.5rem 1.1rem;
+    }
+    .btn-run:hover { background: var(--accent); border-color: var(--accent); box-shadow: 0 2px 10px rgba(200,75,30,0.3); }
+
+    .btn-nav {
+      background: var(--bg-card);
+      color: var(--ink-2);
+      border-color: var(--rule);
+    }
+    .btn-nav:hover:not(:disabled) { background: var(--bg-sidebar); border-color: var(--ink-3); color: var(--ink); }
+    .btn-nav:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-auto {
+      background: var(--accent-2-soft);
+      color: var(--accent-2);
+      border-color: #bdd3f0;
+    }
+    .btn-auto:hover { background: var(--accent-2); color: #fff; box-shadow: 0 2px 10px rgba(37,99,168,0.25); }
+    .btn-auto.active { background: var(--accent-2); color: #fff; }
+
+    .btn-reset {
+      background: transparent;
+      color: var(--ink-3);
+      border-color: transparent;
+      margin-left: auto;
+    }
+    .btn-reset:hover { color: var(--ink); background: var(--bg-sidebar); }
+
+    /* ─── CONTROLS PANEL ─── */
+    .controls-inner {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .step-display {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .step-code {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--ink);
+      background: var(--bg-sidebar);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+      padding: 0.5rem 0.75rem;
+      word-break: break-all;
+    }
+    .step-label {
+      font-size: 0.7rem;
+      color: var(--ink-3);
+      margin-bottom: 0.15rem;
+    }
+    .nav-btns { display: flex; gap: 0.5rem; }
+    .nav-btns .btn { flex: 1; justify-content: center; }
+
+    /* ─── ERROR ─── */
+    .error-box {
+      margin: 0.75rem 1rem;
+      background: #fff5f5;
+      border: 1px solid #fecaca;
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.85rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: #b91c1c;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .error-icon { flex-shrink: 0; margin-top: 1px; }
+
+    /* ─── MEMORY PANEL ─── */
+    .memory-body {
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    .mem-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.45rem 0.7rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--rule);
+      background: var(--bg-editor);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      transition: background 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+    }
+    .mem-entry.changed {
+      background: var(--accent-soft);
+      border-color: #f5b49a;
+      animation: memPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes memPop {
+      0%   { transform: scale(0.97); opacity: 0.7; }
+      60%  { transform: scale(1.02); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .mem-key {
+      color: var(--accent-2);
+      font-weight: 500;
+    }
+    .mem-val {
+      color: var(--ink);
+      font-weight: 500;
+    }
+    .mem-changed-badge {
+      font-size: 0.6rem;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 3px;
+      padding: 1px 5px;
+      letter-spacing: 0.04em;
+    }
+    .mem-empty {
+      color: var(--ink-3);
+      font-size: 0.78rem;
+      text-align: center;
+      padding: 1.5rem 0;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ─── EMPTY STATES ─── */
+    .exec-empty {
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--ink-3);
+    }
+    .exec-empty-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    .exec-empty-text {
+      font-size: 0.82rem;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--ink-3); }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 820px) {
+      .workspace {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        padding: 1rem;
+      }
+      .editor-pane   { grid-column: 1; grid-row: 1; }
+      .controls-pane { grid-column: 1; grid-row: 2; }
+      .memory-pane   { grid-column: 1; grid-row: 3; }
+    }
+  </style>
+</head>
+
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const DEFAULT_CODE = `int a = 5;
+if (a > 3) {
+  a = 10;
+} else {
+  a = 0;
+}`;
+
+function App() {
+  const [code, setCode]               = useState(DEFAULT_CODE);
+  const [steps, setSteps]             = useState([]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [error, setError]             = useState("");
+  const [loading, setLoading]         = useState(false);
+  const [autoPlay, setAutoPlay]       = useState(false);
+  const autoRef                       = useRef(null);
+  const textareaRef                   = useRef(null);
+
+  // ── Auto-play ──
+  useEffect(() => {
+    if (autoPlay && steps.length > 0) {
+      autoRef.current = setInterval(() => {
+        setCurrentStep(s => {
+          if (s >= steps.length - 1) { setAutoPlay(false); return s; }
+          return s + 1;
+        });
+      }, 700);
+    }
+    return () => clearInterval(autoRef.current);
+  }, [autoPlay, steps.length]);
+
+  const runCode = async () => {
+    setError(""); setSteps([]); setCurrentStep(0); setAutoPlay(false); setLoading(true);
+    try {
+      const res = await fetch("http://localhost:18080/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code })
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Something went wrong"); return; }
+      setSteps(Object.values(data));
+    } catch {
+      setError("Server not reachable — is the Crow backend running on :18080?");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const goNext = () => { if (currentStep < steps.length - 1) setCurrentStep(s => s + 1); };
+  const goPrev = () => { if (currentStep > 0) setCurrentStep(s => s - 1); };
+  const goReset = () => { setSteps([]); setCurrentStep(0); setError(""); setAutoPlay(false); };
+
+  const lines         = code.split("\n");
+  const lineCount     = lines.length;
+  const lineNumbers   = Array.from({ length: lineCount }, (_, i) => i + 1);
+  const currentCode   = steps[currentStep]?.code?.trim() ?? "";
+  const prevMemory    = steps[currentStep - 1]?.memory ?? {};
+  const curMemory     = steps[currentStep]?.memory ?? {};
+  const progress      = steps.length > 1 ? (currentStep / (steps.length - 1)) * 100 : 0;
+
+  // Line matching: which original line index is currently active
+  const activeLineIdx = currentCode
+    ? lines.findIndex(l => l.replace(/\s+/g,'').includes(currentCode.replace(/\s+/g,'')))
+    : -1;
+
+  // Sync textarea line numbers with scroll
+  const handleScroll = (e) => {
+    const lnEl = document.getElementById('ln-block');
+    if (lnEl) lnEl.scrollTop = e.target.scrollTop;
+  };
+
+  return (
+    <div>
+      {/* ── Topbar ── */}
+      <div className="topbar">
+        <div className="topbar-brand">
+          <span className="topbar-title">C++ Visualizer</span>
+        </div>
+        <span className="topbar-meta">
+          {steps.length > 0
+            ? `${steps.length} step${steps.length !== 1 ? 's' : ''} · ${Object.keys(curMemory).length} var${Object.keys(curMemory).length !== 1 ? 's' : ''}`
+            : `${lineCount} line${lineCount !== 1 ? 's' : ''}`
+          }
+        </span>
+      </div>
+
+      {/* ── Workspace ── */}
+      <div className="workspace">
+
+        {/* ── Editor Pane ── */}
+        <div className="editor-pane">
+
+          {/* Code Input */}
+          <div className="panel">
+            <div className="panel-header">
+              <div className="panel-dots"><div className="panel-dot"/><div className="panel-dot"/><div className="panel-dot"/></div>
+              <span className="panel-title">Source Editor</span>
+              <span style={{fontSize:'0.7rem',color:'var(--ink-3)',fontFamily:'DM Mono,monospace'}}>main.cpp</span>
+            </div>
+            <div className="editor-body">
+              <div id="ln-block" className="line-numbers" style={{overflow:'hidden',maxHeight:'260px'}}>
+                {lineNumbers.map(n => <div key={n}>{n}</div>)}
+              </div>
+              <textarea
+                ref={textareaRef}
+                className="editor-textarea"
+                rows={Math.max(8, lineCount + 1)}
+                value={code}
+                onChange={e => setCode(e.target.value)}
+                onScroll={handleScroll}
+                spellCheck={false}
+                style={{maxHeight:'260px',overflowY:'auto'}}
+              />
+            </div>
+            <div className="btn-row" style={{borderTop:'1px solid var(--rule)',background:'var(--bg-sidebar)'}}>
+              <button className="btn btn-run" onClick={runCode} disabled={loading}>
+                {loading
+                  ? <><span style={{display:'inline-block',width:'10px',height:'10px',border:'2px solid #fff3',borderTop:'2px solid #fff',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/> Running…</>
+                  : <>▶ Run</>
+                }
+              </button>
+              {steps.length > 0 && (
+                <button className="btn btn-reset" onClick={goReset} title="Clear results">↺ Clear</button>
+              )}
+            </div>
+            {error && (
+              <div className="error-box">
+                <span className="error-icon">✕</span>
+                <span>{error}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Execution Viewer */}
+          <div className="panel">
+            <div className="panel-header">
+              <span className="panel-title">Execution Trace</span>
+              {steps.length > 0 && (
+                <span style={{fontSize:'0.7rem',fontFamily:'DM Mono,monospace',color:'var(--ink-3)'}}>
+                  step {currentStep + 1}/{steps.length}
+                </span>
+              )}
+            </div>
+
+            {steps.length > 0 && (
+              <div className="progress-wrap">
+                <div className="progress-label">
+                  <span>progress</span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+                <div className="progress-track">
+                  <div className="progress-fill" style={{width: progress + '%'}}/>
+                </div>
+              </div>
+            )}
+
+            <div className="exec-body">
+              {steps.length === 0 ? (
+                <div className="exec-empty">
+                  <div className="exec-empty-icon">⎈</div>
+                  <div className="exec-empty-text">Run your code to see the execution trace</div>
+                </div>
+              ) : (
+                lines.map((line, idx) => (
+                  <div key={idx} className={`code-line${idx === activeLineIdx ? ' active' : ''}`}>
+                    <div className="code-line-num">{idx + 1}</div>
+                    <div className="code-line-text">{line || ' '}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── Controls Pane ── */}
+        <div className="controls-pane">
+          <div className="panel" style={{position:'sticky',top:'68px'}}>
+            <div className="panel-header">
+              <span className="panel-title">Step Controls</span>
+            </div>
+            <div className="controls-inner">
+              {steps.length === 0 ? (
+                <div style={{color:'var(--ink-3)',fontSize:'0.78rem',textAlign:'center',padding:'1rem 0',fontFamily:'DM Mono,monospace'}}>
+                  No execution yet
+                </div>
+              ) : (
+                <>
+                  <div className="step-display">
+                    <div className="step-label">executing</div>
+                    <div className="step-code">{currentCode || '—'}</div>
+                  </div>
+
+                  <div className="nav-btns">
+                    <button className="btn btn-nav" onClick={goPrev} disabled={currentStep === 0}>
+                      ← Prev
+                    </button>
+                    <button className="btn btn-nav" onClick={goNext} disabled={currentStep === steps.length - 1}>
+                      Next →
+                    </button>
+                  </div>
+
+                  <button
+                    className={`btn btn-auto${autoPlay ? ' active' : ''}`}
+                    onClick={() => setAutoPlay(a => !a)}
+                    style={{justifyContent:'center'}}
+                  >
+                    {autoPlay ? '⏸ Pause' : '⏵ Auto-play'}
+                  </button>
+
+                  <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
+                    <button
+                      className="btn btn-nav"
+                      style={{fontSize:'0.7rem',padding:'0.3rem 0.6rem'}}
+                      onClick={() => setCurrentStep(0)}
+                      disabled={currentStep === 0}
+                    >⏮ First</button>
+                    <button
+                      className="btn btn-nav"
+                      style={{fontSize:'0.7rem',padding:'0.3rem 0.6rem'}}
+                      onClick={() => setCurrentStep(steps.length - 1)}
+                      disabled={currentStep === steps.length - 1}
+                    >Last ⏭</button>
+                  </div>
+
+                  {/* Mini timeline */}
+                  <div style={{display:'flex',gap:'3px',flexWrap:'wrap',marginTop:'0.25rem'}}>
+                    {steps.map((_,idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => setCurrentStep(idx)}
+                        title={`Step ${idx+1}`}
+                        style={{
+                          width:'18px',height:'6px',
+                          borderRadius:'3px',
+                          cursor:'pointer',
+                          background: idx === currentStep
+                            ? 'var(--accent)'
+                            : idx < currentStep
+                              ? 'var(--accent-2)'
+                              : 'var(--rule)',
+                          transition:'background 0.15s ease',
+                          flexShrink:0
+                        }}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Memory Pane ── */}
+        <div className="memory-pane">
+          <div className="panel">
+            <div className="panel-header">
+              <span className="panel-title">Memory</span>
+              {steps.length > 0 && (
+                <span style={{fontSize:'0.7rem',fontFamily:'DM Mono,monospace',color:'var(--ink-3)'}}>
+                  {Object.keys(curMemory).length} variable{Object.keys(curMemory).length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <div className="memory-body">
+              {steps.length === 0 ? (
+                <div className="mem-empty">— empty —</div>
+              ) : Object.keys(curMemory).length === 0 ? (
+                <div className="mem-empty">no variables yet</div>
+              ) : (
+                Object.entries(curMemory).map(([key, value]) => {
+                  const changed = prevMemory[key] !== value;
+                  return (
+                    <div key={key} className={`mem-entry${changed ? ' changed' : ''}`}>
+                      <span className="mem-key">{key}</span>
+                      <div style={{display:'flex',alignItems:'center',gap:'0.4rem'}}>
+                        {changed && <span className="mem-changed-badge">changed</span>}
+                        <span className="mem-val">{value}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+
+<style>
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
+
+</body>
+</html>
