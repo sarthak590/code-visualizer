@@ -1,11 +1,12 @@
 # C++ Code Visualizer
 
 A web-based tool to visualize execution of C++ code step-by-step.
+This is just a weekend project so there might be bugs
 ###  Notes
 
 * This is a simplified interpreter (not full C++ compiler)
 * Designed for learning and visualization
-## ✨ Features
+## Features
 
 - Step-by-step execution
 - Line highlighting
@@ -17,12 +18,12 @@ A web-based tool to visualize execution of C++ code step-by-step.
   - for loops
 - Clean UI with React + Bootstrap
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - Frontend: HTML, React (CDN), Bootstrap
 - Backend: C++ (Crow framework)
 
-## ⚙️ How to Run
+## How to Run
 
 ### Backend
 
