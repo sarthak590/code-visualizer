@@ -1,7 +1,10 @@
 # C++ Code Visualizer
 
 A web-based tool to visualize execution of C++ code step-by-step.
+###  Notes
 
+* This is a simplified interpreter (not full C++ compiler)
+* Designed for learning and visualization
 ## ✨ Features
 
 - Step-by-step execution
@@ -28,7 +31,3 @@ cd backend
 g++ main.cpp -o server -std=c++17 -I./include -I/opt/homebrew/include -pthread
 ./server
 
-###  Notes
-
-* This is a simplified interpreter (not full C++ compiler)
-* Designed for learning and visualization
